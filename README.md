@@ -26,10 +26,10 @@ Currently runs in **demo mode**: data persists in `localStorage` on the device. 
 
 | Phase | Scope |
 |---|---|
-| **1** ✅ | Sunday assignment board, conflict warnings, fairness, roster, copy-as-text (demo mode) |
-| **1b** | Supabase backend + auth (magic link / ward join code), public read-only view |
+| **1** ✅ | Sunday assignment board, conflict warnings, fairness, roster, copy-as-text |
+| **1b** ✅ | Supabase backend + anonymous device auth with ward join code |
+| **2** ✅ | Thursday activities: cadence engine (1st/3rd/5th = class, 2nd = YW+YM combined, 4th = all combined), monthly themes, plan status chips, edit/add sheets, annual calendar import from the ward spreadsheet (`import/`) |
 | **1.5** | Sunday teaching assignments (per-class model: adult / youth rotation / team-teach) |
-| **2** | Thursday activities: cadence engine (1st/3rd/5th = class, 2nd = YW+YM combined, 4th = all combined), monthly themes, planner assignments, plan status, annual calendar import from the ward spreadsheet |
 | **3** | Reminders (Sat to assigned youth/parents, Wed to presidents with open slots), confirm/decline |
 
 See [PRODUCT_PLAN.md](PRODUCT_PLAN.md) for the full product plan and design decisions.

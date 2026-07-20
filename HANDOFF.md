@@ -1,6 +1,6 @@
 # Youth Coordination Hub — Project Handoff / Status
 
-_Last updated: 2026-07-20. Everything below is deployed, tested, and live in production._
+_Last updated: 2026-07-20 (Phase 2 shipped). Everything below is deployed, tested, and live in production._
 
 ## What this is
 
@@ -22,6 +22,18 @@ A mobile-first web app for coordinating youth assignments in the **Westfield 2nd
 | **Roster** | All 57 youth loaded (Deacons 6, Teachers 9, Priests 16, YW Younger 7, YW Middle 8, YW Older 11) with presidency roles |
 
 **How users get in:** open the URL → device signs in anonymously (Supabase anonymous auth; no email needed) → enter ward code once → device is remembered. Share the URL + code with presidencies; suggest "Add to Home Screen."
+
+## What's built and verified (Phase 2 — DONE, 2026-07-20)
+
+- **Activities tab** — chronological view grouped by month, next-10-weeks default with "show rest of year" toggle.
+- **Cadence engine** — auto-provisions the next 8 Thursdays per the ward rotation (1st/3rd/5th = 6 class activities; 2nd = YW combined + YM combined; 4th = all combined). Skips Thursdays that already have ward events (imported calendar wins); "Cancel activity" tombstones (status=cancelled) so cancelled weeks don't regenerate.
+- **Monthly themes** — editable line under each month header (stored in `monthly_themes`).
+- **Plan-status chips** — tap to cycle unplanned → idea → planned → ready (grey/amber/blue/green). This is the at-a-glance "is Thursday ready?" signal.
+- **Edit sheet** per activity: title, category (spiritual/social/physical/intellectual), time, location, leaders ("Priests / YW Older"), plan details. **Add-event sheet** for anything ad-hoc (class, combined, stake/church/holiday context).
+- **Context events** (stake/church/school/holiday) render as muted rows so presidents see *why* a week is skipped.
+- **2026 calendar imported** — `import/import_calendar.mjs` (idempotent; re-run inserts 0) parsed the ward Google Sheet snapshot (`import/2026_calendar.csv`): 63 events + 10 monthly themes ("Walk with Me …"; June & November have none in the sheet — set them in-app). Combined activities carry leaders + category; verified rendering live (e.g. Jul 29 "Lake Day — planned — Priests / YW Older — 7:00 AM").
+- **Migration applied:** `migration_phase2.sql` added `class_key`, `leaders`, `plan_status`, `plan_details` to `events`.
+- For future years: export the new sheet tab as CSV → `node import/import_calendar.mjs <csv> 2FC514`.
 
 ## What's built and verified (Phase 1 + 1b — DONE)
 
@@ -68,8 +80,8 @@ schema.sql   full schema + RLS + RPCs (already applied in production)
 ## Roadmap (agreed, not yet built)
 
 1. **Phase 1.5 — Sunday teaching assignments.** Per-class teaching model config: adult teaches / youth rotation / adult+youth team-teach. Slots join the same board + conflict + fairness system. Small increment (`teach` slot_type already in schema).
-2. **Phase 2 — Thursday activities.** The cadence engine: 1st/3rd/5th Thursday = class activities; 2nd = YW combined + YM combined; 4th = all-combined (one YM presidency + one YW presidency co-plan, rotating pairings). Monthly themes (2026: "Walk with Me" + monthly virtue), plan status (Unplanned → Idea → Planned → Ready), youth-council "next 4–6 weeks" view, and **import of the ward's 2026 calendar** from the Google Sheet ("Youth Parents" tab — CSV export parsing already proven). Launch target: a monthly youth council meeting.
-3. **Phase 3 — Reminders & follow-through.** Saturday reminders to assigned youth/parents, Wednesday nudges to presidents with open slots, confirm/decline. (Start cheap: "Copy as text" already covers group-chat sharing.)
+2. **Phase 3 — Reminders & follow-through.** Saturday reminders to assigned youth/parents, Wednesday nudges to presidents with open slots, confirm/decline. (Start cheap: "Copy as text" already covers group-chat sharing.)
+3. Smaller ideas: "Copy as text" for a Thursday, Settings screen (ward rename), category balance view (spiritual/social/physical/intellectual across the year).
 
 **Scope guardrails (deliberate no-builds):** no budget tracking, no permission slips, no attendance rolls in v1. Warn on double-booking, never hard-block. If it feels like enterprise software to a 14-year-old president, it's wrong.
 

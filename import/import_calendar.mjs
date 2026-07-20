@@ -152,8 +152,14 @@ async function main() {
   console.log('Already present:', events.length - fresh.length, '| inserting:', fresh.length);
 
   if (fresh.length) {
+    // PostgREST bulk insert requires identical keys on every object
+    const KEYS = ['ward_id', 'event_date', 'type', 'level', 'format', 'title',
+      'category', 'start_time', 'location', 'notes', 'leaders', 'plan_status', 'status'];
+    const norm = fresh.map(e => Object.fromEntries(KEYS.map(k => [k,
+      e[k] !== undefined ? e[k]
+        : (k === 'plan_status' ? 'unplanned' : k === 'status' ? 'scheduled' : null)])));
     const ins = await api('/rest/v1/events', {
-      method: 'POST', body: JSON.stringify(fresh),
+      method: 'POST', body: JSON.stringify(norm),
       headers: { Prefer: 'return=representation' },
     });
     console.log('Inserted events:', ins.length);
