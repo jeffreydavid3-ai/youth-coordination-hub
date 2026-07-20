@@ -163,6 +163,7 @@
       notes: r.notes, leaders: r.leaders, planStatus: r.plan_status || 'unplanned',
       planDetails: r.plan_details, status: r.status,
       audience: r.audience ? String(r.audience).split(',').filter(Boolean) : null,
+      endDate: r.end_date || null,
     };
   }
 
@@ -325,7 +326,7 @@
     title: 'title', category: 'category', time: 'start_time', location: 'location',
     notes: 'notes', leaders: 'leaders', planStatus: 'plan_status',
     planDetails: 'plan_details', status: 'status', format: 'format', cls: 'class_key',
-    date: 'event_date', level: 'level', audience: 'audience',
+    date: 'event_date', level: 'level', audience: 'audience', endDate: 'end_date',
   };
   // audience is string[] in memory, csv text in the DB
   function actColValue(key, v) {
@@ -341,6 +342,7 @@
       leaders: fields.leaders || null, planStatus: fields.planStatus || 'unplanned',
       planDetails: fields.planDetails || null, status: 'scheduled',
       audience: (fields.audience && fields.audience.length) ? fields.audience : null,
+      endDate: fields.endDate || null,
     };
     if (!LIVE) {
       store.activities.push(local);
@@ -351,8 +353,9 @@
     Object.entries(ACT_COLS).forEach(([k, col]) => {
       if (local[k] !== undefined) row[col] = actColValue(k, local[k]);
     });
-    // omit audience unless used, so inserts keep working pre-migration
+    // omit optional columns unless used, so inserts keep working pre-migration
     if (row.audience === null) delete row.audience;
+    if (row.end_date === null) delete row.end_date;
     delete row.id;
     const { data, error } = await sb.from('events').insert(row).select().single();
     if (error) { reportErr('Add failed: ' + error.message); return null; }

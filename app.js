@@ -335,7 +335,13 @@
       const audTxt = (a.audience && a.audience.length)
         ? a.audience.map(k => (D.CLASSES[k] || {}).label || k).join(' · ')
         : null;
-      const whenWhere = [a.time, a.location].filter(Boolean).join(' · ');
+      let range = null;
+      if (a.endDate && a.endDate > a.date) {
+        const days = D.weeksBetween ? Math.round(
+          (new Date(a.endDate) - new Date(a.date)) / 86400000) + 1 : null;
+        range = `${D.fmtDate(a.date, { month: 'short', day: 'numeric' })} – ${D.fmtDate(a.endDate, { month: 'short', day: 'numeric' })}${days ? ` (${days} days)` : ''}`;
+      }
+      const whenWhere = [range, a.time, a.location].filter(Boolean).join(' · ');
       if (a.level !== 'ward') {
         return `<div class="act-row context" data-act="${a.id}">
           <span class="chip level">${a.level}</span>
@@ -419,6 +425,8 @@
           <label>Time<input id="af-time" maxlength="20" value="${esc(a ? (a.time || '') : '7:00 PM')}"></label>
           <label>Location<input id="af-loc" maxlength="60" value="${esc(a ? (a.location || '') : '')}"></label>
         </div>
+        <label>Ends on <span class="label-hint">(optional — for multi-day events like camps)</span>
+          <input type="date" id="af-end" value="${esc(a ? (a.endDate || '') : '')}"></label>
         ${isWard ? `<label>In charge / leaders<input id="af-leaders" maxlength="80" value="${esc(a ? (a.leaders || '') : '')}" placeholder="e.g. Priests / YW Older"></label>
         <label>The plan<textarea id="af-details" rows="3" placeholder="What's happening, supplies, assignments…">${esc(a ? (a.planDetails || '') : '')}</textarea></label>` : ''}
         <div class="af-actions">
@@ -448,6 +456,11 @@
       if (audPicked.length || (a && a.audience && a.audience.length)) {
         patch.audience = audPicked;
       }
+      // end date: same omit-unless-used pattern (migration_phase2c)
+      const endVal = val('#af-end');
+      const startVal = a ? a.date : val('#af-date');
+      if (endVal && endVal <= startVal) { toast('End date must be after the start date'); return; }
+      if (endVal || (a && a.endDate)) patch.endDate = endVal || null;
       if (isWard) {
         if ($('#af-cat')) patch.category = val('#af-cat') || null;
         if ($('#af-plan')) patch.planStatus = val('#af-plan');
