@@ -41,11 +41,11 @@ A mobile-first web app for coordinating youth assignments in the **Westfield 2nd
 
 ## What's built and verified (Phase 1 + 1b — DONE)
 
-- **Sunday board** — all weekly assignment slots on one screen, next 8 Sundays as date pills with fill counters (e.g. `12/19`):
-  - Prepare the Sacrament — 4 slots, teachers (owner: Teachers Quorum pres.)
-  - Bless the Sacrament — 3 slots, priests only (owner: bishop / priests presidency — the priests have **no president**; the bishop is acting president, Kyle P is 1st counselor)
-  - Pass the Sacrament — 8 slots, **deacons listed first, teachers as "helpers"** (only 4–5 deacons attend, so 3–4 teachers fill the gap)
+- **Sunday board** — all weekly assignment slots on one screen, next 8 Sundays as date pills with fill counters (e.g. `12/15`). Order: greeters first, then bless, then pass:
   - Greeters — 2 YW + 2 YM slots (owner: YW class presidents)
+  - Bless the Sacrament — 3 slots, priests only (owner label "Priest President" — the priests have **no president**; the bishop is acting president, Kyle P is 1st counselor)
+  - Pass the Sacrament — 8 slots, **deacons listed first, teachers as "helpers"** (only 4–5 deacons attend, so 3–4 teachers fill the gap)
+  - Prepare the Sacrament — **hidden for now** (all teachers are invited to help each week, no named assignments). Commented out in db.js SECTIONS; server still provisions its 4 slots, re-enable by uncommenting.
 - **Double-booking prevention** — picker warns "⚠ already: Pass the Sacrament"; assigning anyway is allowed (warn, don't block) and the board shows a "double-booked" badge.
 - **Fairness signal** — every name shows "never served" / "served N wks ago", sorted longest-ago first.
 - **Copy as text** — one tap produces a plain-text summary of the Sunday for pasting into group chats.
