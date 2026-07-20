@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Youth Coordination Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=1">
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div>
+      <div class="app-title">Youth Hub</div>
+      <div class="ward-name" id="ward-name"></div>
+    </div>
+    <div class="demo-chip" title="Data is saved on this device only. Supabase sync comes next.">DEMO</div>
+  </header>
+
+  <main id="view"></main>
+
+  <nav class="tabbar">
+    <button class="tab active" data-view="sundays">⛪ Sundays</button>
+    <button class="tab" data-view="activities">🎯 Activities</button>
+    <button class="tab" data-view="roster">👥 Roster</button>
+  </nav>
+</div>
+
+<!-- Bottom-sheet member picker -->
+<div class="sheet-backdrop" id="sheet-backdrop" style="display:none;">
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheet-title"></div>
+    <div class="sheet-sub" id="sheet-sub"></div>
+    <div class="sheet-list" id="sheet-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" style="display:none;"></div>
+
+<script src="./db.js?v=1"></script>
+<script src="./app.js?v=1"></script>
+</body>
+</html>
