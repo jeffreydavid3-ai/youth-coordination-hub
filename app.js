@@ -330,14 +330,18 @@
     });
 
     const rows = list.map(a => {
+      const subLine = (label, value) => value
+        ? `<div class="act-sub"><span class="sub-label">${label}</span>${esc(value)}</div>` : '';
       const audTxt = (a.audience && a.audience.length)
-        ? 'For: ' + a.audience.map(k => (D.CLASSES[k] || {}).short || k).join(', ')
+        ? a.audience.map(k => (D.CLASSES[k] || {}).short || k).join(' · ')
         : null;
+      const whenWhere = [a.time, a.location].filter(Boolean).join(' · ');
       if (a.level !== 'ward') {
         return `<div class="act-row context" data-act="${a.id}">
           <span class="chip level">${a.level}</span>
           <span class="act-title">${esc(defaultTitle(a))}</span>
-          <span class="act-meta">${esc([audTxt, a.time, a.location].filter(Boolean).join(' · '))}</span></div>`;
+          ${subLine('For', audTxt)}
+          ${whenWhere ? `<div class="act-sub">${esc(whenWhere)}</div>` : ''}</div>`;
       }
       // chip: class chip for class rows; format chip only when a custom title
       // would otherwise hide the format
@@ -351,7 +355,9 @@
       return `<div class="act-row" data-act="${a.id}">
         ${planChip(a)}${chip}
         <span class="act-title">${esc(defaultTitle(a))}</span>
-        <span class="act-meta">${esc([audTxt, a.leaders, a.time].filter(Boolean).join(' · '))}</span></div>`;
+        ${subLine('For', audTxt)}
+        ${subLine('In charge', a.leaders)}
+        ${whenWhere ? `<div class="act-sub">${esc(whenWhere)}</div>` : ''}</div>`;
     }).join('');
 
     return `<div class="section-card act-card">
