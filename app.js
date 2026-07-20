@@ -236,14 +236,18 @@
     let acts = D.activities().filter(a => a.date >= today);
 
     // "My class" filter: keep my class activities, my group's combined,
-    // all-combined, and context events (stake/school/holiday still matter)
+    // all-combined, and context events. An explicit audience list overrides
+    // all of that — the event shows only for classes it names.
     const f = state.actFilter;
     if (f !== 'all' && D.CLASSES[f]) {
       const myCombined = D.CLASSES[f].group === 'ym' ? 'ym_combined' : 'yw_combined';
-      acts = acts.filter(a => a.level !== 'ward'
-        || a.format === 'all_combined'
-        || a.format === myCombined
-        || (a.format === 'class' && a.cls === f));
+      acts = acts.filter(a => {
+        if (a.audience && a.audience.length) return a.audience.includes(f);
+        if (a.level !== 'ward') return true;
+        return a.format === 'all_combined'
+          || a.format === myCombined
+          || (a.format === 'class' && a.cls === f);
+      });
     }
 
     const hasMore = acts.some(a => a.date > horizon);
@@ -272,9 +276,12 @@
         </div>${dateCards}`;
     }).join('');
 
-    const filterChips = [['all', 'All classes'], ...Object.entries(D.CLASSES).map(([k, c]) => [k, c.label])]
-      .map(([k, label]) => `<button class="filter-chip ${state.actFilter === k ? 'active' : ''}" data-filter="${k}">${label}</button>`)
-      .join('');
+    const chip = (k, label) =>
+      `<button class="filter-chip ${state.actFilter === k ? 'active' : ''}" data-filter="${k}">${label}</button>`;
+    const ywChips = Object.entries(D.CLASSES).filter(([, c]) => c.group === 'yw').map(([k, c]) => chip(k, c.label)).join('');
+    const ymChips = Object.entries(D.CLASSES).filter(([, c]) => c.group === 'ym').map(([k, c]) => chip(k, c.label)).join('');
+    const filterChips = `<div class="filter-line">${chip('all', 'All')}${ywChips}</div>
+      <div class="filter-line">${ymChips}</div>`;
 
     $('#view').innerHTML = `
       <div class="board-head" style="margin-top:8px;">
@@ -323,11 +330,14 @@
     });
 
     const rows = list.map(a => {
+      const audTxt = (a.audience && a.audience.length)
+        ? 'For: ' + a.audience.map(k => (D.CLASSES[k] || {}).short || k).join(', ')
+        : null;
       if (a.level !== 'ward') {
         return `<div class="act-row context" data-act="${a.id}">
           <span class="chip level">${a.level}</span>
           <span class="act-title">${esc(defaultTitle(a))}</span>
-          <span class="act-meta">${esc([a.time, a.location].filter(Boolean).join(' · '))}</span></div>`;
+          <span class="act-meta">${esc([audTxt, a.time, a.location].filter(Boolean).join(' · '))}</span></div>`;
       }
       // chip: class chip for class rows; format chip only when a custom title
       // would otherwise hide the format
@@ -341,7 +351,7 @@
       return `<div class="act-row" data-act="${a.id}">
         ${planChip(a)}${chip}
         <span class="act-title">${esc(defaultTitle(a))}</span>
-        <span class="act-meta">${esc([a.leaders, a.time].filter(Boolean).join(' · '))}</span></div>`;
+        <span class="act-meta">${esc([audTxt, a.leaders, a.time].filter(Boolean).join(' · '))}</span></div>`;
     }).join('');
 
     return `<div class="section-card act-card">
@@ -384,12 +394,17 @@
     const planOpts = D.PLAN_STATUS.map(p =>
       `<option value="${p}" ${a && a.planStatus === p ? 'selected' : ''}>${p}</option>`).join('');
     const audOpts = AUDIENCES.map(o => `<option value="${o.key}">${o.label}</option>`).join('');
+    const audSel = (a && a.audience) || [];
+    const audChips = Object.entries(D.CLASSES).map(([k, c]) =>
+      `<button type="button" class="aud-chip ${audSel.includes(k) ? 'active' : ''}" data-aud="${k}">${c.label}</button>`).join('');
 
     const body = `
       <div class="act-form">
         ${a ? '' : `<label>Date<input type="date" id="af-date" value="${D.nextThursdays(1)[0]}"></label>
                     <label>Who is it for<select id="af-aud">${audOpts}</select></label>`}
         <label>Title / activity<input id="af-title" maxlength="80" value="${esc(a ? (a.title || '') : '')}" placeholder="e.g. Bowling night"></label>
+        <label>Only for certain classes? <span class="label-hint">(optional — leave blank for everyone)</span>
+          <div class="aud-chips">${audChips}</div></label>
         ${isWard ? `<div class="af-row">
           <label>Category<select id="af-cat">${catOpts}</select></label>
           <label>Plan status<select id="af-plan">${planOpts}</select></label>
@@ -411,6 +426,9 @@
     openSheet(a ? 'Edit — ' + defaultTitle(a) : 'Add event',
       a ? D.fmtDate(a.date, { weekday: 'long', month: 'long', day: 'numeric' }) : '', body);
 
+    document.querySelectorAll('.aud-chip').forEach(b =>
+      b.addEventListener('click', () => b.classList.toggle('active')));
+
     $('#af-save').addEventListener('click', async () => {
       const val = (sel) => { const el = $(sel); return el ? el.value.trim() : ''; };
       const patch = {
@@ -418,6 +436,12 @@
         time: val('#af-time') || null,
         location: val('#af-loc') || null,
       };
+      // audience: only include when set (or being cleared) so writes keep
+      // working before migration_phase2b is applied
+      const audPicked = [...document.querySelectorAll('.aud-chip.active')].map(b => b.dataset.aud);
+      if (audPicked.length || (a && a.audience && a.audience.length)) {
+        patch.audience = audPicked;
+      }
       if (isWard) {
         if ($('#af-cat')) patch.category = val('#af-cat') || null;
         if ($('#af-plan')) patch.planStatus = val('#af-plan');

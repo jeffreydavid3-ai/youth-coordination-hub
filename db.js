@@ -159,6 +159,7 @@
       title: r.title, category: r.category, time: r.start_time, location: r.location,
       notes: r.notes, leaders: r.leaders, planStatus: r.plan_status || 'unplanned',
       planDetails: r.plan_details, status: r.status,
+      audience: r.audience ? String(r.audience).split(',').filter(Boolean) : null,
     };
   }
 
@@ -321,8 +322,13 @@
     title: 'title', category: 'category', time: 'start_time', location: 'location',
     notes: 'notes', leaders: 'leaders', planStatus: 'plan_status',
     planDetails: 'plan_details', status: 'status', format: 'format', cls: 'class_key',
-    date: 'event_date', level: 'level',
+    date: 'event_date', level: 'level', audience: 'audience',
   };
+  // audience is string[] in memory, csv text in the DB
+  function actColValue(key, v) {
+    if (key !== 'audience') return v;
+    return Array.isArray(v) && v.length ? v.join(',') : null;
+  }
 
   async function addActivity(fields) {
     const local = {
@@ -331,6 +337,7 @@
       time: fields.time || null, location: fields.location || null, notes: fields.notes || null,
       leaders: fields.leaders || null, planStatus: fields.planStatus || 'unplanned',
       planDetails: fields.planDetails || null, status: 'scheduled',
+      audience: (fields.audience && fields.audience.length) ? fields.audience : null,
     };
     if (!LIVE) {
       store.activities.push(local);
@@ -338,7 +345,11 @@
       save(); return local;
     }
     const row = { ward_id: store.ward.id, type: 'activity' };
-    Object.entries(ACT_COLS).forEach(([k, col]) => { if (local[k] !== undefined) row[col] = local[k]; });
+    Object.entries(ACT_COLS).forEach(([k, col]) => {
+      if (local[k] !== undefined) row[col] = actColValue(k, local[k]);
+    });
+    // omit audience unless used, so inserts keep working pre-migration
+    if (row.audience === null) delete row.audience;
     delete row.id;
     const { data, error } = await sb.from('events').insert(row).select().single();
     if (error) { reportErr('Add failed: ' + error.message); return null; }
@@ -355,7 +366,7 @@
     save();
     if (!LIVE) return;
     const row = {};
-    Object.entries(patch).forEach(([k, v]) => { if (ACT_COLS[k]) row[ACT_COLS[k]] = v; });
+    Object.entries(patch).forEach(([k, v]) => { if (ACT_COLS[k]) row[ACT_COLS[k]] = actColValue(k, v); });
     if (!Object.keys(row).length) return;
     sb.from('events').update(row).eq('id', id)
       .then(({ error }) => { if (error) reportErr('Save failed: ' + error.message); });

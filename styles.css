@@ -235,17 +235,23 @@ main { padding: 0 16px 16px; }
 }
 .theme-banner.empty .tb-label { color: var(--ink-soft); opacity: 1; }
 
-.filter-row {
-  display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 10px;
-  scrollbar-width: none;
-}
-.filter-row::-webkit-scrollbar { display: none; }
+.filter-row { padding: 2px 0 10px; }
+.filter-line { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
 .filter-chip {
   flex: 0 0 auto; border: 1px solid var(--line); background: var(--card);
-  border-radius: 999px; padding: 6px 12px; font-family: inherit;
+  border-radius: 999px; padding: 6px 11px; font-family: inherit;
   font-size: 12px; font-weight: 600; color: var(--ink-soft); cursor: pointer;
 }
 .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.label-hint { font-weight: 500; text-transform: none; }
+.aud-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.aud-chip {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 999px;
+  padding: 6px 11px; font-family: inherit; font-size: 12px; font-weight: 600;
+  color: var(--ink-soft); cursor: pointer;
+}
+.aud-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .act-card { padding: 12px 14px; }
 .act-date { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
 .act-row {
@@ -253,9 +259,13 @@ main { padding: 0 16px 16px; }
   padding: 8px 0; border-top: 1px solid var(--line); cursor: pointer;
 }
 .act-row:first-of-type { border-top: none; }
-.act-title { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; }
+.act-row { flex-wrap: wrap; }
+.act-title { font-size: 13px; font-weight: 600; flex: 1; min-width: 40%; }
 .act-title.struck { text-decoration: line-through; color: var(--ink-soft); font-weight: 500; }
-.act-meta { font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+.act-meta {
+  font-size: 11px; color: var(--ink-soft);
+  margin-left: auto; text-align: right; max-width: 100%;
+}
 .act-row.context .act-title { font-weight: 500; color: var(--ink-soft); }
 .chip.level { background: #eef1f5; color: var(--ink-soft); text-transform: uppercase; }
 .chip.fmt { background: var(--accent-soft); color: var(--accent); }
