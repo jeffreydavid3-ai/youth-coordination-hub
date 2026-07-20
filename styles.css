@@ -215,6 +215,50 @@ main { padding: 0 16px 16px; }
 }
 .tab.active { color: var(--accent); background: var(--accent-soft); }
 
+/* ---------- activities ---------- */
+.month-head { margin: 18px 2px 8px; }
+.month-name { font-weight: 800; font-size: 16px; }
+.theme-line {
+  border: none; background: none; font-family: inherit; cursor: pointer;
+  font-size: 12px; color: var(--accent); font-weight: 600; padding: 2px 0;
+}
+.act-card { padding: 12px 14px; }
+.act-date { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.act-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-top: 1px solid var(--line); cursor: pointer;
+}
+.act-row:first-of-type { border-top: none; }
+.act-title { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; }
+.act-title.struck { text-decoration: line-through; color: var(--ink-soft); font-weight: 500; }
+.act-meta { font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+.act-row.context .act-title { font-weight: 500; color: var(--ink-soft); }
+.chip.level { background: #eef1f5; color: var(--ink-soft); text-transform: uppercase; }
+.chip.fmt { background: var(--accent-soft); color: var(--accent); }
+.plan-chip {
+  border: none; font-family: inherit; cursor: pointer;
+  font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+}
+.plan-chip.unplanned { background: #eef1f5; color: var(--ink-soft); }
+.plan-chip.idea { background: var(--warn-soft); color: var(--warn); }
+.plan-chip.planned { background: var(--accent-soft); color: var(--accent); }
+.plan-chip.ready { background: #dcfce7; color: var(--ok); }
+.show-more { display: block; margin: 14px auto; }
+
+/* ---------- activity form (in sheet) ---------- */
+.act-form { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.act-form label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 11px; font-weight: 700; color: var(--ink-soft); flex: 1;
+}
+.act-form input, .act-form select, .act-form textarea {
+  font-family: inherit; font-size: 14px; font-weight: 400; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+  background: var(--bg); width: 100%; box-sizing: border-box;
+}
+.af-row { display: flex; gap: 10px; }
+.af-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
 /* ---------- toast ---------- */
 .toast {
   position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%);

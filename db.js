@@ -1,13 +1,14 @@
 // db.js — data layer for Youth Coordination Hub. Two modes behind one API:
 //   LIVE — Supabase (config.js has URL + key). In-memory store mirrors the
 //          server; mutations update locally (optimistic) and write through.
-//   DEMO — localStorage only (config.js values empty).
+//   DEMO — localStorage only (config.js empty, or ?demo in the URL).
 // app.js reads window.DB synchronously; auth.js drives DB.boot() first.
 
 (function () {
   const KEY = 'ych_data_v1';
   const CFG = window.APP_CONFIG || {};
-  const LIVE = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
+  const LIVE = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase)
+    && !/[?&]demo\b/.test(location.search);
 
   const CLASSES = {
     yw_younger: { label: 'YW Younger', short: 'YW-Y', group: 'yw' },
@@ -28,19 +29,63 @@
 
   const SECTIONS = [
     { key: 'prep',     title: 'Prepare the Sacrament', owner: 'Teachers Quorum Pres.', count: 4, eligible: ['teachers'] },
-    { key: 'bless',    title: 'Bless the Sacrament',   owner: 'Priests Quorum Pres.',  count: 3, eligible: ['priests'] },
+    { key: 'bless',    title: 'Bless the Sacrament',   owner: 'Bishopric / Priests Pres.', count: 3, eligible: ['priests'] },
     { key: 'pass',     title: 'Pass the Sacrament',    owner: 'Deacons Quorum Pres.',  count: 8, eligible: ['deacons', 'teachers'], note: 'Deacons first — teachers fill remaining spots' },
     { key: 'greet_yw', title: 'Greeters — Young Women', owner: 'YW Class Presidents',  count: 2, eligible: ['yw_younger', 'yw_middle', 'yw_older'] },
     { key: 'greet_ym', title: 'Greeters — Young Men',   owner: 'YW Class Presidents',  count: 2, eligible: ['deacons', 'teachers', 'priests'] },
   ];
 
-  let sb = null;      // supabase client (live mode)
-  let store = null;   // { ward:{id?,name,join_code?}, members:[], sundays:{} }
-  let maps = { event: {}, slot: {} }; // live-mode row ids: event[date], slot[date][key][idx]
+  const FORMATS = {
+    class:        'Class Activity',
+    yw_combined:  'YW Combined',
+    ym_combined:  'YM Combined',
+    all_combined: 'All Youth Combined',
+  };
+  const PLAN_STATUS = ['unplanned', 'idea', 'planned', 'ready'];
+  const CATEGORIES = ['spiritual', 'social', 'physical', 'intellectual'];
+
+  let sb = null;
+  let store = null;   // { ward, members[], sundays{}, activities[], themes{} }
+  let maps = { event: {}, slot: {} };
+  let actLoadError = null;
   let errCb = null;
   function reportErr(msg) { if (errCb) errCb(msg); }
 
   function uid() { return 'm' + Math.random().toString(36).slice(2, 10); }
+
+  // ================= dates =================
+  function iso(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function todayISO() { const d = new Date(); d.setHours(0, 0, 0, 0); return iso(d); }
+  function nextDows(dow, n) {
+    const out = [];
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7));
+    for (let i = 0; i < n; i++) { out.push(iso(new Date(d))); d.setDate(d.getDate() + 7); }
+    return out;
+  }
+  const nextSundays = (n) => nextDows(0, n);
+  const nextThursdays = (n) => nextDows(4, n);
+  function fmtDate(isoStr, opts) {
+    const [y, m, dd] = isoStr.split('-').map(Number);
+    return new Date(y, m - 1, dd).toLocaleDateString('en-US', opts || { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function addDaysISO(isoStr, days) {
+    const [y, m, dd] = isoStr.split('-').map(Number);
+    const d = new Date(y, m - 1, dd); d.setDate(d.getDate() + days);
+    return iso(d);
+  }
+  function nthOfMonth(isoStr) { return Math.ceil(Number(isoStr.slice(8)) / 7); }
+
+  // Cadence: 1st/3rd/5th Thu = class activities; 2nd = YW + YM combined;
+  // 4th = all combined. Skipped for any Thursday that already has a ward event.
+  function cadenceFor(dateISO) {
+    const nth = nthOfMonth(dateISO);
+    if (nth === 2) return [{ format: 'yw_combined' }, { format: 'ym_combined' }];
+    if (nth === 4) return [{ format: 'all_combined' }];
+    return Object.keys(CLASSES).map(c => ({ format: 'class', class_key: c }));
+  }
 
   // ================= demo internals =================
   function seedMembers() {
@@ -63,23 +108,24 @@
   function demoLoad() {
     try { store = JSON.parse(localStorage.getItem(KEY)); } catch (e) { store = null; }
     if (!store || !store.members) store = { ward: { name: 'Demo Ward' }, members: seedMembers(), sundays: {} };
+    if (!store.activities) store.activities = [];
+    if (!store.themes) store.themes = {};
+    ensureThursdaysDemo();
   }
   function save() { if (!LIVE) localStorage.setItem(KEY, JSON.stringify(store)); }
 
-  // ================= dates =================
-  function iso(d) {
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-  function nextSundays(n) {
-    const out = [];
-    const d = new Date(); d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
-    for (let i = 0; i < n; i++) { out.push(iso(new Date(d))); d.setDate(d.getDate() + 7); }
-    return out;
-  }
-  function fmtDate(isoStr, opts) {
-    const [y, m, dd] = isoStr.split('-').map(Number);
-    return new Date(y, m - 1, dd).toLocaleDateString('en-US', opts || { weekday: 'short', month: 'short', day: 'numeric' });
+  function ensureThursdaysDemo() {
+    const have = new Set(store.activities.filter(a => a.level === 'ward').map(a => a.date));
+    nextThursdays(8).forEach(d => {
+      if (have.has(d)) return;
+      cadenceFor(d).forEach(c => store.activities.push({
+        id: uid(), date: d, format: c.format, level: 'ward', cls: c.class_key || null,
+        title: null, category: null, time: null, location: null, notes: null,
+        leaders: null, planStatus: 'unplanned', planDetails: null, status: 'scheduled',
+      }));
+    });
+    store.activities.sort((a, b) => (a.date < b.date ? -1 : 1));
+    save();
   }
 
   // ================= boot / ward lifecycle (live) =================
@@ -107,10 +153,21 @@
     return loadAll(wards[0]);
   }
 
+  function rowToAct(r) {
+    return {
+      id: r.id, date: r.event_date, format: r.format, level: r.level, cls: r.class_key || null,
+      title: r.title, category: r.category, time: r.start_time, location: r.location,
+      notes: r.notes, leaders: r.leaders, planStatus: r.plan_status || 'unplanned',
+      planDetails: r.plan_details, status: r.status,
+    };
+  }
+
   async function loadAll(ward) {
-    const [mres, sres] = await Promise.all([
+    const [mres, sres, ares, tres] = await Promise.all([
       sb.from('members').select('*').eq('ward_id', ward.id).order('name'),
       sb.rpc('ensure_sundays', { p_ward: ward.id, p_dates: nextSundays(8) }),
+      sb.from('events').select('*').eq('ward_id', ward.id).eq('type', 'activity').order('event_date'),
+      sb.from('monthly_themes').select('*').eq('ward_id', ward.id),
     ]);
     if (mres.error) return { status: 'error', message: 'Roster load failed: ' + mres.error.message };
     if (sres.error) return { status: 'error', message: 'Sundays load failed: ' + sres.error.message };
@@ -118,7 +175,7 @@
     store = {
       ward: { id: ward.id, name: ward.name, join_code: ward.join_code },
       members: (mres.data || []).map(r => ({ id: r.id, name: r.name, cls: r.class_key, role: r.role, active: r.active })),
-      sundays: {},
+      sundays: {}, activities: [], themes: {},
     };
     maps = { event: {}, slot: {} };
     (sres.data || []).forEach(ev => {
@@ -135,7 +192,38 @@
       store.sundays[date] = { off: ev.status === 'no_assignments', note: '', slots };
       maps.slot[date] = smap;
     });
+
+    // Activities + themes are non-fatal (e.g. Phase 2 migration not applied yet)
+    actLoadError = ares.error ? ares.error.message : null;
+    if (!ares.error) {
+      store.activities = (ares.data || []).map(rowToAct);
+      if (!tres.error) (tres.data || []).forEach(t => {
+        store.themes[t.year + '-' + String(t.month).padStart(2, '0')] = t.theme;
+      });
+      await ensureThursdaysLive(ward.id);
+    }
     return { status: 'ready', mode: 'live' };
+  }
+
+  async function ensureThursdaysLive(wardId) {
+    const have = new Set(store.activities.filter(a => a.level === 'ward').map(a => a.date));
+    const rows = [];
+    nextThursdays(8).forEach(d => {
+      if (have.has(d)) return;
+      cadenceFor(d).forEach(c => rows.push({
+        ward_id: wardId, event_date: d, type: 'activity', level: 'ward',
+        format: c.format, class_key: c.class_key || null, plan_status: 'unplanned',
+      }));
+    });
+    if (!rows.length) return;
+    const { data, error } = await sb.from('events').insert(rows).select();
+    if (!error && data) {
+      store.activities.push(...data.map(rowToAct));
+      store.activities.sort((a, b) => (a.date < b.date ? -1 : 1));
+    } else if (error) {
+      // pre-migration (missing columns) or a create race — surface once, non-fatal
+      actLoadError = actLoadError || ('Could not create Thursday activities: ' + error.message);
+    }
   }
 
   async function createWard(name, label) {
@@ -149,7 +237,6 @@
     return loadAll(data);
   }
 
-  // Re-pull everything; resolves true if anything changed.
   async function refresh() {
     if (!LIVE || !store || !store.ward.id) return false;
     const before = JSON.stringify(store);
@@ -225,6 +312,81 @@
     return Math.round((toD(bISO) - toD(aISO)) / (7 * 24 * 3600 * 1000));
   }
 
+  // ================= activities =================
+  function activities() { return store.activities.slice(); }
+  function activityById(id) { return store.activities.find(a => a.id === id) || null; }
+  function activitiesError() { return actLoadError; }
+
+  const ACT_COLS = {
+    title: 'title', category: 'category', time: 'start_time', location: 'location',
+    notes: 'notes', leaders: 'leaders', planStatus: 'plan_status',
+    planDetails: 'plan_details', status: 'status', format: 'format', cls: 'class_key',
+    date: 'event_date', level: 'level',
+  };
+
+  async function addActivity(fields) {
+    const local = {
+      id: uid(), date: fields.date, format: fields.format || null, level: fields.level || 'ward',
+      cls: fields.cls || null, title: fields.title || null, category: fields.category || null,
+      time: fields.time || null, location: fields.location || null, notes: fields.notes || null,
+      leaders: fields.leaders || null, planStatus: fields.planStatus || 'unplanned',
+      planDetails: fields.planDetails || null, status: 'scheduled',
+    };
+    if (!LIVE) {
+      store.activities.push(local);
+      store.activities.sort((a, b) => (a.date < b.date ? -1 : 1));
+      save(); return local;
+    }
+    const row = { ward_id: store.ward.id, type: 'activity' };
+    Object.entries(ACT_COLS).forEach(([k, col]) => { if (local[k] !== undefined) row[col] = local[k]; });
+    delete row.id;
+    const { data, error } = await sb.from('events').insert(row).select().single();
+    if (error) { reportErr('Add failed: ' + error.message); return null; }
+    const act = rowToAct(data);
+    store.activities.push(act);
+    store.activities.sort((a, b) => (a.date < b.date ? -1 : 1));
+    return act;
+  }
+
+  function updateActivity(id, patch) {
+    const a = activityById(id);
+    if (!a) return;
+    Object.assign(a, patch);
+    save();
+    if (!LIVE) return;
+    const row = {};
+    Object.entries(patch).forEach(([k, v]) => { if (ACT_COLS[k]) row[ACT_COLS[k]] = v; });
+    if (!Object.keys(row).length) return;
+    sb.from('events').update(row).eq('id', id)
+      .then(({ error }) => { if (error) reportErr('Save failed: ' + error.message); });
+  }
+
+  // Ward cadence events are cancelled (kept as tombstones so the cadence
+  // engine doesn't recreate them); context events are hard-deleted.
+  function removeActivity(id) {
+    const a = activityById(id);
+    if (!a) return;
+    if (a.level === 'ward') { updateActivity(id, { status: 'cancelled' }); return; }
+    store.activities = store.activities.filter(x => x.id !== id);
+    save();
+    if (!LIVE) return;
+    sb.from('events').delete().eq('id', id)
+      .then(({ error }) => { if (error) reportErr('Delete failed: ' + error.message); });
+  }
+  function restoreActivity(id) { updateActivity(id, { status: 'scheduled' }); }
+
+  // ================= monthly themes =================
+  function themeFor(ym) { return store.themes[ym] || null; }
+  function setTheme(ym, theme) {
+    store.themes[ym] = theme;
+    save();
+    if (!LIVE) return;
+    const [y, m] = ym.split('-').map(Number);
+    sb.from('monthly_themes')
+      .upsert({ ward_id: store.ward.id, year: y, month: m, theme }, { onConflict: 'ward_id,year,month' })
+      .then(({ error }) => { if (error) reportErr('Theme save failed: ' + error.message); });
+  }
+
   // ================= roster =================
   function members() { return store.members.slice(); }
   function activeByClass(cls) {
@@ -278,15 +440,19 @@
 
   function resetDemo() {
     if (LIVE) return;
-    store = { ward: { name: 'Demo Ward' }, members: seedMembers(), sundays: {} };
+    store = { ward: { name: 'Demo Ward' }, members: seedMembers(), sundays: {}, activities: [], themes: {} };
+    ensureThursdaysDemo();
     save();
   }
 
   window.DB = {
-    LIVE, CLASSES, ROLES, SECTIONS,
+    LIVE, CLASSES, ROLES, SECTIONS, FORMATS, PLAN_STATUS, CATEGORIES,
     boot, createWard, joinWard, refresh,
-    nextSundays, fmtDate, ensureSunday, assign, clearSlot, setWeekOff,
+    nextSundays, nextThursdays, fmtDate, todayISO, addDaysISO, nthOfMonth,
+    ensureSunday, assign, clearSlot, setWeekOff,
     conflicts, lastServed, weeksBetween,
+    activities, activityById, activitiesError, addActivity, updateActivity,
+    removeActivity, restoreActivity, themeFor, setTheme,
     members, activeByClass, memberById, addMember, updateMember, removeMember,
     ward: () => store.ward, resetDemo,
     onError: (cb) => { errCb = cb; },
