@@ -269,7 +269,10 @@
     });
     save();
     if (!LIVE) return;
-    sb.from('members').delete().eq('id', id)
+    // Clear their slots first so status doesn't stay 'filled' with no member
+    // (the FK only nulls member_id on delete).
+    sb.from('assignment_slots').update({ member_id: null, status: 'open' }).eq('member_id', id)
+      .then(() => sb.from('members').delete().eq('id', id))
       .then(({ error }) => { if (error) reportErr('Delete failed: ' + error.message); });
   }
 
