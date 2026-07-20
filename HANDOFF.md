@@ -1,6 +1,8 @@
 # Youth Coordination Hub — Project Handoff / Status
 
-_Last updated: 2026-07-20 (Phase 2 shipped). Everything below is deployed, tested, and live in production._
+_Last updated: 2026-07-20 (Phase 2 complete + polish). Everything below is deployed, tested, and live in production._
+
+**Current status: BETA TESTING.** The ward is gathering real-world usage and feedback on the current version. Feature work (Phase 1.5 teaching assignments, Phase 3 reminders) is intentionally on hold until that feedback lands — polish/fix requests only.
 
 ## What this is
 
@@ -31,12 +33,14 @@ A mobile-first web app for coordinating youth assignments in the **Westfield 2nd
 - **Cadence engine** — auto-provisions the next 8 Thursdays per the ward rotation (1st/3rd/5th = 6 class activities; 2nd = YW combined + YM combined; 4th = all combined). Skips Thursdays that already have ward events (imported calendar wins); "Cancel activity" tombstones (status=cancelled) so cancelled weeks don't regenerate.
 - **Monthly themes** — gradient banner under each month header, tap to edit (stored in `monthly_themes`).
 - **My-class filter** — two-row chip grid on Activities (All + YW classes / YM classes, no horizontal scroll): picking a class shows only that class's activities, its group's combined (YW or YM), all-combined, and context events. Persists per device (`localStorage: ych_act_filter`).
-- **Audience targeting** — any event can be limited to specific classes ("Only for certain classes?" chips in the add/edit sheet) for things like 14+ stake dances (Teachers/Priests/YW Middle/YW Older). Shows as "For: Tea, Pri, YW-M, YW-O" on the row; the class filter respects it (audience overrides format rules). Stored as csv in `events.audience` (migration_phase2b.sql).
+- **Audience targeting** — any event can be limited to specific classes ("Only for certain classes?" chips in the add/edit sheet) for things like 14+ stake dances. Shows as a labeled `FOR` line with full class names; the class filter respects it (audience overrides format rules). Stored as csv in `events.audience` (migration_phase2b.sql). Already tagged in prod: the three "Youth 14+" imported events (Feb 22, Feb 25, Apr 16) and Stake YM Camp (Deacons/Teachers/Priests, set by the user).
+- **Multi-day events** — optional "Ends on" date in the add/edit sheet; rows show "Aug 6 – Aug 8 (3 days)". Validates end > start. `events.end_date` (migration_phase2c.sql). In use: Stake YM Camp Aug 6–8.
+- **Row layout** — activity rows show labeled sub-lines (`FOR` audience, `IN CHARGE` leaders, then date-range/time/location) instead of one jumbled meta string. All class chips spell out full names (no Dea/Tea/Pri/YW-M abbreviations anywhere).
 - **Plan-status chips** — tap to cycle unplanned → idea → planned → ready (grey/amber/blue/green). This is the at-a-glance "is Thursday ready?" signal.
 - **Edit sheet** per activity: title, category (spiritual/social/physical/intellectual), time, location, leaders ("Priests / YW Older"), plan details. **Add-event sheet** for anything ad-hoc (class, combined, stake/church/holiday context).
 - **Context events** (stake/church/school/holiday) render as muted rows so presidents see *why* a week is skipped.
 - **2026 calendar imported** — `import/import_calendar.mjs` (idempotent; re-run inserts 0) parsed the ward Google Sheet snapshot (`import/2026_calendar.csv`): 63 events + 10 monthly themes ("Walk with Me …"; June & November have none in the sheet — set them in-app). Combined activities carry leaders + category; verified rendering live (e.g. Jul 29 "Lake Day — planned — Priests / YW Older — 7:00 AM").
-- **Migration applied:** `migration_phase2.sql` added `class_key`, `leaders`, `plan_status`, `plan_details` to `events`.
+- **Migrations applied (all three):** `migration_phase2.sql` (`class_key`, `leaders`, `plan_status`, `plan_details`), `migration_phase2b.sql` (`audience`), `migration_phase2c.sql` (`end_date`) — all on `events`.
 - For future years: export the new sheet tab as CSV → `node import/import_calendar.mjs <csv> 2FC514`.
 
 ## What's built and verified (Phase 1 + 1b — DONE)
@@ -70,7 +74,7 @@ schema.sql   full schema + RLS + RPCs (already applied in production)
 ```
 
 **Data model:** `wards → ward_devices (auth access) / members (roster, no logins) / events (type: sunday|activity) → assignment_slots`. Plus `activity_plans`, `monthly_themes` (Phase 2, tables exist).
-**RPCs:** `create_ward`, `join_ward(code)`, `ensure_sundays(ward, dates[])` (idempotently provisions each Sunday's 19 slots server-side).
+**RPCs:** `create_ward`, `join_ward(code)`, `ensure_sundays(ward, dates[])` (idempotently provisions each Sunday's 19 slots server-side; the UI shows 15 while Prepare is hidden).
 **Conflict/fairness logic** is client-side over the loaded ward data (small scale — one ward).
 
 ## Operational notes
@@ -81,7 +85,9 @@ schema.sql   full schema + RLS + RPCs (already applied in production)
 - Deleting a roster member clears their slots first (fixed 2026-07-20) — slots reset to `open` rather than staying `filled` with no member.
 - Anonymous auth means clearing browser data = device must rejoin with the ward code. Data is unaffected.
 
-## Roadmap (agreed, not yet built)
+## Roadmap (agreed, not yet built — ON HOLD pending beta feedback)
+
+The user decided (2026-07-20) to pause new features and gather ward testing/feedback on the current version first. When feedback lands, expect a mix of polish items plus one of:
 
 1. **Phase 1.5 — Sunday teaching assignments.** Per-class teaching model config: adult teaches / youth rotation / adult+youth team-teach. Slots join the same board + conflict + fairness system. Small increment (`teach` slot_type already in schema).
 2. **Phase 3 — Reminders & follow-through.** Saturday reminders to assigned youth/parents, Wednesday nudges to presidents with open slots, confirm/decline. (Start cheap: "Copy as text" already covers group-chat sharing.)
