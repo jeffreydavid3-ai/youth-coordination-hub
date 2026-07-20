@@ -11,9 +11,9 @@
     && !/[?&]demo\b/.test(location.search);
 
   const CLASSES = {
-    yw_younger: { label: 'YW Younger', short: 'YW-Y', group: 'yw' },
-    yw_middle:  { label: 'YW Middle',  short: 'YW-M', group: 'yw' },
-    yw_older:   { label: 'YW Older',   short: 'YW-O', group: 'yw' },
+    yw_younger: { label: 'YW Younger', short: 'YW Younger', group: 'yw' },
+    yw_middle:  { label: 'YW Middle',  short: 'YW Middle',  group: 'yw' },
+    yw_older:   { label: 'YW Older',   short: 'YW Older',   group: 'yw' },
     deacons:    { label: 'Deacons',    short: 'Deacons',  group: 'ym' },
     teachers:   { label: 'Teachers',   short: 'Teachers', group: 'ym' },
     priests:    { label: 'Priests',    short: 'Priests',  group: 'ym' },
