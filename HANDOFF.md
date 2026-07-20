@@ -27,7 +27,8 @@ A mobile-first web app for coordinating youth assignments in the **Westfield 2nd
 
 - **Activities tab** — chronological view grouped by month, next-10-weeks default with "show rest of year" toggle.
 - **Cadence engine** — auto-provisions the next 8 Thursdays per the ward rotation (1st/3rd/5th = 6 class activities; 2nd = YW combined + YM combined; 4th = all combined). Skips Thursdays that already have ward events (imported calendar wins); "Cancel activity" tombstones (status=cancelled) so cancelled weeks don't regenerate.
-- **Monthly themes** — editable line under each month header (stored in `monthly_themes`).
+- **Monthly themes** — gradient banner under each month header, tap to edit (stored in `monthly_themes`).
+- **My-class filter** — chip row on Activities (All / each class): picking a class shows only that class's activities, its group's combined (YW or YM), all-combined, and context events. Persists per device (`localStorage: ych_act_filter`).
 - **Plan-status chips** — tap to cycle unplanned → idea → planned → ready (grey/amber/blue/green). This is the at-a-glance "is Thursday ready?" signal.
 - **Edit sheet** per activity: title, category (spiritual/social/physical/intellectual), time, location, leaders ("Priests / YW Older"), plan details. **Add-event sheet** for anything ad-hoc (class, combined, stake/church/holiday context).
 - **Context events** (stake/church/school/holiday) render as muted rows so presidents see *why* a week is skipped.
