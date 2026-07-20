@@ -333,7 +333,7 @@
       const subLine = (label, value) => value
         ? `<div class="act-sub"><span class="sub-label">${label}</span>${esc(value)}</div>` : '';
       const audTxt = (a.audience && a.audience.length)
-        ? a.audience.map(k => (D.CLASSES[k] || {}).short || k).join(' · ')
+        ? a.audience.map(k => (D.CLASSES[k] || {}).label || k).join(' · ')
         : null;
       const whenWhere = [a.time, a.location].filter(Boolean).join(' · ');
       if (a.level !== 'ward') {

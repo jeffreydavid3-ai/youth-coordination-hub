@@ -23,6 +23,8 @@ A mobile-first web app for coordinating youth assignments in the **Westfield 2nd
 
 **How users get in:** open the URL → device signs in anonymously (Supabase anonymous auth; no email needed) → enter ward code once → device is remembered. Share the URL + code with presidencies; suggest "Add to Home Screen."
 
+**Class age bands** (useful for audience targeting — "Youth 14+" = the older four classes): Deacons + YW Younger = 12–13, Teachers + YW Middle = 14–15, Priests + YW Older = 16–18.
+
 ## What's built and verified (Phase 2 — DONE, 2026-07-20)
 
 - **Activities tab** — chronological view grouped by month, next-10-weeks default with "show rest of year" toggle.
