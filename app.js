@@ -11,6 +11,7 @@
     picker: null,      // member picker open { key, idx }
     actSheet: null,    // activity sheet open { id } or { add: true }
     actShowAll: false, // activities: false = next ~10 weeks, true = everything
+    actFilter: localStorage.getItem('ych_act_filter') || 'all', // 'all' or a class key
   };
   const sheetOpen = () => !!(state.picker || state.actSheet);
 
@@ -233,6 +234,18 @@
     const today = D.todayISO();
     const horizon = D.addDaysISO(today, 70);
     let acts = D.activities().filter(a => a.date >= today);
+
+    // "My class" filter: keep my class activities, my group's combined,
+    // all-combined, and context events (stake/school/holiday still matter)
+    const f = state.actFilter;
+    if (f !== 'all' && D.CLASSES[f]) {
+      const myCombined = D.CLASSES[f].group === 'ym' ? 'ym_combined' : 'yw_combined';
+      acts = acts.filter(a => a.level !== 'ward'
+        || a.format === 'all_combined'
+        || a.format === myCombined
+        || (a.format === 'class' && a.cls === f));
+    }
+
     const hasMore = acts.some(a => a.date > horizon);
     if (!state.actShowAll) acts = acts.filter(a => a.date <= horizon);
 
@@ -253,10 +266,15 @@
       const dateCards = dates.map(d => renderActivityDate(d, byMonth[ym][d])).join('');
       return `<div class="month-head">
           <div class="month-name">${monthName}</div>
-          <button class="theme-line" data-theme-ym="${ym}">
-            ${theme ? `🎯 ${esc(theme)}` : '+ Set monthly theme'}</button>
+          <button class="theme-banner ${theme ? '' : 'empty'}" data-theme-ym="${ym}">
+            <span class="tb-label">Monthly theme</span>
+            ${theme ? `🎯 ${esc(theme)}` : '+ Set the theme for ' + monthName.split(' ')[0]}</button>
         </div>${dateCards}`;
     }).join('');
+
+    const filterChips = [['all', 'All classes'], ...Object.entries(D.CLASSES).map(([k, c]) => [k, c.label])]
+      .map(([k, label]) => `<button class="filter-chip ${state.actFilter === k ? 'active' : ''}" data-filter="${k}">${label}</button>`)
+      .join('');
 
     $('#view').innerHTML = `
       <div class="board-head" style="margin-top:8px;">
@@ -265,11 +283,18 @@
           <button class="btn primary" id="act-add">+ Add event</button>
         </div>
       </div>
+      <div class="filter-row">${filterChips}</div>
       ${monthHTML || '<div class="placeholder"><div class="ph-icon">🎯</div>No upcoming activities.</div>'}
       ${hasMore && !state.actShowAll ? '<button class="btn show-more" id="act-more">Show rest of year</button>' : ''}
       ${state.actShowAll ? '<button class="btn show-more" id="act-less">Show next 10 weeks only</button>' : ''}`;
 
     $('#act-add').addEventListener('click', () => openActivitySheet(null));
+    document.querySelectorAll('.filter-chip').forEach(b =>
+      b.addEventListener('click', () => {
+        state.actFilter = b.dataset.filter;
+        localStorage.setItem('ych_act_filter', state.actFilter);
+        render();
+      }));
     const more = $('#act-more'); if (more) more.addEventListener('click', () => { state.actShowAll = true; render(); });
     const less = $('#act-less'); if (less) less.addEventListener('click', () => { state.actShowAll = false; render(); });
 

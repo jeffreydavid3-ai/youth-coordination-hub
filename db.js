@@ -29,7 +29,7 @@
 
   const SECTIONS = [
     { key: 'prep',     title: 'Prepare the Sacrament', owner: 'Teachers Quorum Pres.', count: 4, eligible: ['teachers'] },
-    { key: 'bless',    title: 'Bless the Sacrament',   owner: 'Bishopric / Priests Pres.', count: 3, eligible: ['priests'] },
+    { key: 'bless',    title: 'Bless the Sacrament',   owner: 'Priest President', count: 3, eligible: ['priests'] },
     { key: 'pass',     title: 'Pass the Sacrament',    owner: 'Deacons Quorum Pres.',  count: 8, eligible: ['deacons', 'teachers'], note: 'Deacons first — teachers fill remaining spots' },
     { key: 'greet_yw', title: 'Greeters — Young Women', owner: 'YW Class Presidents',  count: 2, eligible: ['yw_younger', 'yw_middle', 'yw_older'] },
     { key: 'greet_ym', title: 'Greeters — Young Men',   owner: 'YW Class Presidents',  count: 2, eligible: ['deacons', 'teachers', 'priests'] },
