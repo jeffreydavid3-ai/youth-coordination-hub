@@ -42,7 +42,31 @@ body { background: var(--bg); color: var(--ink); }
   font-size: 10px; font-weight: 700; letter-spacing: 1px;
   background: var(--warn-soft); color: var(--warn);
   padding: 4px 8px; border-radius: 999px;
+  border: none; font-family: inherit; cursor: pointer;
 }
+
+/* ---------- auth / boot ---------- */
+#auth-root {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px 16px;
+}
+.auth-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+  padding: 28px 22px; max-width: 400px; width: 100%; text-align: center;
+}
+.auth-logo { font-size: 40px; margin-bottom: 8px; }
+.auth-card h2 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+.auth-hint { font-size: 13px; color: var(--ink-soft); line-height: 1.5; margin: 8px 0; }
+.auth-err {
+  font-size: 13px; color: var(--warn); background: var(--warn-soft);
+  border-radius: 10px; padding: 10px 12px; margin: 10px 0; line-height: 1.5;
+}
+.auth-field { display: flex; gap: 8px; margin: 14px 0 0; }
+.auth-field input {
+  flex: 1; font-family: inherit; font-size: 14px; border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; background: var(--bg); min-width: 0;
+}
+.auth-divider { font-size: 11px; color: var(--ink-soft); margin: 16px 0 2px; text-transform: uppercase; letter-spacing: 1px; }
 
 main { padding: 0 16px 16px; }
 

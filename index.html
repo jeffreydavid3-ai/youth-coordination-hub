@@ -5,17 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Youth Coordination Hub</title>
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=1">
+  <link rel="stylesheet" href="./styles.css?v=2">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
-<div class="app">
+<!-- Auth / boot root (join or create ward) -->
+<div id="auth-root"></div>
+
+<!-- App shell — hidden until boot completes -->
+<div class="app" id="app-shell" style="display:none;">
   <header class="topbar">
     <div>
       <div class="app-title">Youth Hub</div>
       <div class="ward-name" id="ward-name"></div>
     </div>
-    <div class="demo-chip" title="Data is saved on this device only. Supabase sync comes next.">DEMO</div>
+    <button class="demo-chip" id="mode-chip"></button>
   </header>
 
   <main id="view"></main>
@@ -39,7 +44,9 @@
 
 <div class="toast" id="toast" style="display:none;"></div>
 
-<script src="./db.js?v=1"></script>
-<script src="./app.js?v=1"></script>
+<script src="./config.js?v=2"></script>
+<script src="./db.js?v=2"></script>
+<script src="./app.js?v=2"></script>
+<script src="./auth.js?v=2"></script>
 </body>
 </html>

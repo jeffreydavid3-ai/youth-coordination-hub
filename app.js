@@ -1,4 +1,5 @@
 // app.js — views + interaction. Depends on window.DB (db.js).
+// auth.js calls APP.start() once DB.boot() has finished.
 
 (function () {
   const D = window.DB;
@@ -7,7 +8,7 @@
   const state = {
     view: 'sundays',
     date: D.nextSundays(1)[0],
-    picker: null, // { date, key, idx }
+    picker: null, // { key, idx }
   };
 
   // ================= helpers =================
@@ -16,7 +17,7 @@
     t.textContent = msg;
     t.style.display = 'block';
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => { t.style.display = 'none'; }, 2200);
+    toast._t = setTimeout(() => { t.style.display = 'none'; }, 2600);
   }
 
   function classChip(cls) {
@@ -146,7 +147,7 @@
     $('#sheet-title').textContent = `Assign — ${s.title}`;
     $('#sheet-sub').textContent = D.fmtDate(state.date, { weekday: 'long', month: 'long', day: 'numeric' });
 
-    const groups = s.eligible.map((cls, gi) => {
+    const groups = s.eligible.map(cls => {
       const label = D.CLASSES[cls].label + (s.key === 'pass' && cls === 'teachers' ? ' (helpers)' : '');
       const rows = D.activeByClass(cls)
         .map(m => {
@@ -225,11 +226,11 @@
       </div>
       ${groups}`;
 
-    $('#add-member').addEventListener('click', () => {
+    $('#add-member').addEventListener('click', async () => {
       const name = $('#new-name').value.trim();
       if (!name) { toast('Enter a name'); return; }
-      D.addMember(name, $('#new-cls').value, $('#new-role').value);
-      toast(`Added ${name}`);
+      const m = await D.addMember(name, $('#new-cls').value, $('#new-role').value);
+      if (m) toast(`Added ${m.name}`);
       render();
     });
     document.querySelectorAll('.mini-btn').forEach(b =>
@@ -262,6 +263,43 @@
     else renderActivities();
   }
 
+  function renderModeChip() {
+    const chip = $('#mode-chip');
+    if (!D.LIVE) {
+      chip.textContent = 'DEMO';
+      chip.title = 'Data is saved on this device only. Set config.js to go live.';
+      chip.onclick = null;
+      return;
+    }
+    const code = D.ward().join_code || '';
+    chip.textContent = `WARD CODE: ${code}`;
+    chip.title = 'Tap to copy — share with presidencies and leaders so their devices can join';
+    chip.onclick = () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(() => toast(`Ward code ${code} copied`));
+      }
+    };
+  }
+
+  function start() {
+    D.onError(toast);
+    renderModeChip();
+    render();
+
+    if (D.LIVE) {
+      // Pick up other presidencies' changes: poll every 60s + on tab focus.
+      const maybeRefresh = async () => {
+        if (state.picker) return; // don't yank the sheet out from under a pick
+        const changed = await D.refresh();
+        if (changed && !state.picker) { renderModeChip(); render(); }
+      };
+      setInterval(maybeRefresh, 60000);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) maybeRefresh();
+      });
+    }
+  }
+
   document.querySelectorAll('.tab').forEach(t =>
     t.addEventListener('click', () => {
       state.view = t.dataset.view;
@@ -273,5 +311,5 @@
     if (e.target === $('#sheet-backdrop')) closePicker();
   });
 
-  render();
+  window.APP = { start };
 })();
